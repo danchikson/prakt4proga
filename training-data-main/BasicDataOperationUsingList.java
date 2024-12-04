@@ -1,9 +1,6 @@
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Arrays;
-import java.util.Date;
+import java.util.*;
+import java.util.stream.*;
 
 /**
  * Клас BasicDataOperationUsingList надає методи для виконання основних операцій з даними типу short.
@@ -27,10 +24,9 @@ public class BasicDataOperationUsingList {
     public BasicDataOperationUsingList(short valueToSearch) {
         this.valueToSearch = valueToSearch;
         this.shortArray = Utils.readArrayFromFile(PATH_TO_DATA_FILE);
-        this.shortList = new ArrayList<>();
-        for (short value : shortArray) {
-            shortList.add(value);
-        }
+        this.shortList = Arrays.stream(shortArray)  // преобразуем массив в список
+                                .boxed()
+                                .collect(Collectors.toList());
     }
 
     public void performOperations() {
@@ -40,7 +36,7 @@ public class BasicDataOperationUsingList {
         System.out.println("Операції з масивом:");
 
         measureTime("пошук у масиві", this::searchInArray);
-        printCurrentDateTime();  // Печать текущего времени перед следующей операцией
+        printCurrentDateTime();  // Печать текущего времени перед следующей операцією
 
         measureTime("пошук мінімального і максимального значення у масиві", this::findMinAndMaxInArray);
         printCurrentDateTime(); 
@@ -82,7 +78,7 @@ public class BasicDataOperationUsingList {
     }
 
     private void searchInArray() {
-        int index = Utils.binarySearch(shortArray, valueToSearch);
+        int index = Arrays.binarySearch(shortArray, valueToSearch);
         if (index >= 0) {
             System.out.println("Значення '" + valueToSearch + "' знайдено в масиві за індексом: " + index);
         } else {
@@ -96,27 +92,19 @@ public class BasicDataOperationUsingList {
             return;
         }
 
-        short min = shortArray[0];
-        short max = shortArray[0];
-        for (short value : shortArray) {
-            if (value < min) min = value;
-            if (value > max) max = value;
-        }
+        short min = Arrays.stream(shortArray).min().orElse((short) 0);
+        short max = Arrays.stream(shortArray).max().orElse((short) 0);
 
         System.out.println("Мінімальне значення в масиві: " + min);
         System.out.println("Максимальне значення в масиві: " + max);
     }
 
     private void sortArray() {
-        // вимiрюємо час, витрачений на сортування масиву
-        long startTime = System.nanoTime();
         Arrays.sort(shortArray);
-        long endTime = System.nanoTime();
-        Utils.printOperationDuration(startTime, "сортування масиву", endTime);
     }
 
     private void searchInList() {
-        int index = Collections.binarySearch(shortList, valueToSearch);
+        int index = shortList.indexOf(valueToSearch);
         if (index >= 0) {
             System.out.println("Значення '" + valueToSearch + "' знайдено в списку за індексом: " + index);
         } else {
@@ -130,15 +118,15 @@ public class BasicDataOperationUsingList {
             return;
         }
 
-        short min = Collections.min(shortList);
-        short max = Collections.max(shortList);
+        short min = shortList.stream().min(Short::compareTo).orElse((short) 0);
+        short max = shortList.stream().max(Short::compareTo).orElse((short) 0);
 
         System.out.println("Мінімальне значення у списку: " + min);
         System.out.println("Максимальне значення у списку: " + max);
     }
 
     private void sortList() {
-        Collections.sort(shortList);
+        shortList = shortList.stream().sorted().collect(Collectors.toList());
     }
 
     /**
@@ -155,21 +143,13 @@ public class BasicDataOperationUsingList {
  */
 class Utils {
     public static short[] readArrayFromFile(String pathToFile) {
-        List<Short> values = new ArrayList<>();
         try (BufferedReader reader = new BufferedReader(new FileReader(pathToFile))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                values.add(Short.parseShort(line));
-            }
+            return reader.lines()
+                    .mapToShort(Short::parseShort)
+                    .toArray();
         } catch (IOException e) {
             throw new RuntimeException("Помилка читання файлу: " + e.getMessage(), e);
         }
-
-        short[] result = new short[values.size()];
-        for (int i = 0; i < values.size(); i++) {
-            result[i] = values.get(i);
-        }
-        return result;
     }
 
     public static void writeArrayToFile(short[] array, String pathToFile) {
@@ -183,40 +163,11 @@ class Utils {
         }
     }
 
-    public static void sort(short[] array) {
-        for (int i = 0; i < array.length - 1; i++) {
-            for (int j = 0; j < array.length - i - 1; j++) {
-                if (array[j] > array[j + 1]) {
-                    short temp = array[j];
-                    array[j] = array[j + 1];
-                    array[j + 1] = temp;
-                }
-            }
-        }
-    }
-
-    public static int binarySearch(short[] array, short value) {
-        int left = 0;
-        int right = array.length - 1;
-        while (left <= right) {
-            int mid = (left + right) / 2;
-            if (array[mid] == value) {
-                return mid;
-            } else if (array[mid] < value) {
-                left = mid + 1;
-            } else {
-                right = mid - 1;
-            }
-        }
-        return -1;
-    }
-
     /**
      * Метод для отримання поточної дати і часу.
      */
     public static String getCurrentDateTime() {
-        Date now = new Date();
-        return now.toString();
+        return new Date().toString();
     }
 
     /**
